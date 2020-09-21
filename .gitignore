@@ -1,0 +1,5 @@
+/.tmp.drivedownload/
+/venv/
+/.idea/
+/__pycache__/
+/private/
