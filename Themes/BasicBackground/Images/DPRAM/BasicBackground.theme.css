@@ -15,7 +15,7 @@
 	--font:							Whitney, Helvetica Neue, Helvetica, Arial, sans-serif;		/* font used in most places														*/
 	--textshadow:					transparent;				/* default: transparent			(textshadow for text ontop of accentcolor nodes, ONLY accepts a color, no px)	*/
 	
-	--background:					url(https://cdn.discordapp.com/attachments/509055208341372931/757330062109442048/0f73f05ac6b946d2e52003b2f8a4a110.png);	/* general background image						*/
+	--background:					url(https://vedanshgoenka.github.io/BetterDiscord_Plugins_Themes/Themes/BasicBackground/Images/Daft%20Punk%20RAM/DaftPunk_RAMHelmet.jpg);	/* general background image						*/
 	--backgroundsize:				contain;						/* default: cover				(sizefit of general background - values: [cover/contain/auto])					*/
 	--backgroundblur:				0px;						/* default: 0px					(only works when --background is set to an image)								*/
 	
