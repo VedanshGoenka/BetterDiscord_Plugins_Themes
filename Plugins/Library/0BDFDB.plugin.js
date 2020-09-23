@@ -5,7 +5,7 @@ module.exports = (_ => {
 		"info": {
 			"name": "BDFDB",
 			"author": "DevilBro",
-			"version": "1.0.2",
+			"version": "1.0.4",
 			"description": "Gives other plugins utility functions."
 		},
 		"rawUrl": "https://mwittrien.github.io/BetterDiscordAddons/Library/0BDFDB.plugin.js",
@@ -17,6 +17,7 @@ module.exports = (_ => {
 	const InternalComponents = {NativeSubComponents: {}, LibraryComponents: {}};
 	const Cache = {data: {}, modules: {}};
 	
+	var libraryInstance;
 	var settings = {};
 	
 	if (window.BDFDB_Global && window.BDFDB_Global.PluginUtils && typeof window.BDFDB_Global.PluginUtils.cleanUp == "function") {
@@ -51,6 +52,7 @@ module.exports = (_ => {
 			getVersion() {return config.info.version;}
 			getDescription() {return config.info.description;}
 			load() {
+				this.loaded = true;
 				if (window.BDFDB_Global.loading) {
 					if (!PluginStores.delayedLoad.includes(this)) PluginStores.delayedLoad.push(this);
 				}
@@ -63,6 +65,7 @@ module.exports = (_ => {
 				}
 			}
 			start() {
+				if (!this.loaded) this.load();
 				if (window.BDFDB_Global.loading) {
 					if (!PluginStores.delayedStart.includes(this)) PluginStores.delayedStart.push(this);
 				}
@@ -610,7 +613,6 @@ module.exports = (_ => {
 					updateNoticeList.hasTooltip = true;
 					updateNotice.tooltip = BDFDB.TooltipUtils.create(updateNoticeList, BDFDB.LanguageUtils.LibraryStrings.update_notice_click, {
 						type: "bottom",
-						unhideable: true,
 						zIndex: 100001,
 						delay: 500,
 						onHide: _ => {updateNoticeList.hasTooltip = false;}
@@ -729,18 +731,6 @@ module.exports = (_ => {
 			key: `${plugin.name}-settingsPanel`,
 			plugin: plugin,
 			title: plugin.name,
-			controls: [
-				plugin.changeLog && BDFDB.ReactUtils.createElement(InternalComponents.LibraryComponents.Clickable, {
-					className: BDFDB.disCN.settingspanelheaderbutton,
-					children: BDFDB.ReactUtils.createElement(InternalComponents.LibraryComponents.TooltipContainer, {
-						text: BDFDB.LanguageUtils.LanguageStrings.CHANGE_LOG,
-						children: BDFDB.ReactUtils.createElement(InternalComponents.LibraryComponents.SvgIcon, {
-							name: InternalComponents.LibraryComponents.SvgIcon.Names.CHANGELOG,
-							onClick: _ => {BDFDB.PluginUtils.openChangeLog(plugin);}
-						})
-					})
-				})
-			],
 			children: children
 		}), settingsPanel);
 		return settingsPanel;
@@ -1155,12 +1145,12 @@ module.exports = (_ => {
 					text = typeof text == "function" ? text() : text;
 					if (typeof text != "string" && !BDFDB.ReactUtils.isValidElement(text) && !BDFDB.ObjectUtils.is(options.guild)) return null;
 					let id = BDFDB.NumberUtils.generateId(Tooltips);
-					let zIndexed = typeof options.zIndex == "number" || options.unhideable;
+					let zIndexed = typeof options.zIndex == "number";
 					let itemLayer = BDFDB.DOMUtils.create(`<div class="${BDFDB.disCNS.itemlayer + BDFDB.disCN.itemlayerdisabledpointerevents}"><div class="${BDFDB.disCN.tooltip}" tooltip-id="${id}"><div class="${BDFDB.disCN.tooltippointer}"></div><div class="${BDFDB.disCN.tooltipcontent}"></div></div></div>`);
 					if (zIndexed) {
 						let itemLayerContainerClone = itemLayerContainer.cloneNode();
 						itemLayerContainerClone.style.setProperty("z-index", options.zIndex || 1002, "important");
-						itemLayerContainer.parentElement.insertBefore(itemLayerContainerClone, itemLayerContainer.nextElementChild);
+						itemLayerContainer.parentElement.insertBefore(itemLayerContainerClone, itemLayerContainer.nextElementSibling);
 						itemLayerContainer = itemLayerContainerClone;
 					}
 					itemLayerContainer.appendChild(itemLayer);
@@ -1200,7 +1190,7 @@ module.exports = (_ => {
 					if (typeof options.maxWidth == "number" && options.maxWidth > 196) {
 						tooltip.style.setProperty("max-width", `${options.maxWidth}px`, "important");
 					}
-					if (customBackgroundColor || options.unhideable) BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN.tooltipcustom);
+					if (customBackgroundColor) BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN.tooltipcustom);
 					else if (options.color && BDFDB.disCN["tooltip" + options.color.toLowerCase()]) BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN["tooltip" + options.color.toLowerCase()]);
 					else BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN.tooltipblack);
 					
@@ -1290,7 +1280,12 @@ module.exports = (_ => {
 					});
 					(tooltip.update = itemLayer.update = newText => {
 						if (newText) tooltip.setText(newText);
-						let left, top, tRects = BDFDB.DOMUtils.getRects(anker), iRects = BDFDB.DOMUtils.getRects(itemLayer), aRects = BDFDB.DOMUtils.getRects(document.querySelector(BDFDB.dotCN.appmount)), positionOffsets = {height: 10, width: 10}, offset = typeof options.offset == "number" ? options.offset : 0;
+						let left, top;
+						const tRects = BDFDB.DOMUtils.getRects(anker);
+						const iRects = BDFDB.DOMUtils.getRects(itemLayer);
+						const aRects = BDFDB.DOMUtils.getRects(document.querySelector(BDFDB.dotCN.appmount));
+						const positionOffsets = {height: 10, width: 10};
+						const offset = typeof options.offset == "number" ? options.offset : 0;
 						switch (type) {
 							case "top":
 								top = tRects.top - iRects.height - positionOffsets.height + 2 - offset;
@@ -1321,7 +1316,7 @@ module.exports = (_ => {
 								tooltipPointer.style.setProperty("margin-left", `${left - 10}px`, "important");
 							}
 							else {
-								let rightMargin = aRects.width - (left + iRects.width);
+								const rightMargin = aRects.width - (left + iRects.width);
 								if (rightMargin < 0) {
 									itemLayer.style.setProperty("left", `${aRects.width - iRects.width - 5}px`, "important");
 									tooltipPointer.style.setProperty("margin-left", `${-1*rightMargin}px`, "important");
@@ -1330,42 +1325,18 @@ module.exports = (_ => {
 						}
 						else if (type == "left" || type == "right") {
 							if (top < 0) {
-								itemLayer.style.setProperty("top", "5px");
-								tooltipPointer.style.setProperty("margin-top", `${top - 10}px`, "important");
+								const bRects = BDFDB.DOMUtils.getRects(document.querySelector(BDFDB.dotCN.titlebar));
+								const barCorrection = (bRects.width || 0) >= Math.round(75 * window.outerWidth / aRects.width) ? (bRects.height + 5) : 0;
+								itemLayer.style.setProperty("top", `${5 + barCorrection}px`, "important");
+								tooltipPointer.style.setProperty("margin-top", `${top - 10 - barCorrection}px`, "important");
 							}
 							else {
-								let bottomMargin = aRects.height - (top + iRects.height);
+								const bottomMargin = aRects.height - (top + iRects.height);
 								if (bottomMargin < 0) {
 									itemLayer.style.setProperty("top", `${aRects.height - iRects.height - 5}px`, "important");
 									tooltipPointer.style.setProperty("margin-top", `${-1*bottomMargin}px`, "important");
 								}
 							}
-						}
-						if (options.unhideable) {
-							for (let node of [itemLayer, tooltip, tooltipContent]) {
-								node.style.setProperty("position", "absolute", "important");
-								node.style.setProperty("right", "unset", "important");
-								node.style.setProperty("bottom", "unset", "important");
-								node.style.setProperty("display", "block", "important");
-								node.style.setProperty("opacity", "1", "important");
-								node.style.setProperty("visibility", "visible", "important");
-								node.style.setProperty("max-width", "unset", "important");
-								node.style.setProperty("min-width", "50px", "important");
-								node.style.setProperty("width", "unset", "important");
-								node.style.setProperty("max-height", "unset", "important");
-								node.style.setProperty("min-height", "14px", "important");
-								node.style.setProperty("height", "unset", "important");
-								node.style.setProperty("animation", "unset", "important");
-								node.style.setProperty("transform", "unset", "important");
-							}
-							for (let node of [tooltip, tooltipContent]) {
-								node.style.setProperty("position", "static", "important");
-								node.style.setProperty("top", "unset", "important");
-								node.style.setProperty("left", "unset", "important");
-							}
-							tooltip.style.setProperty("background", "#000", "important");
-							tooltipContent.style.setProperty("color", "#dcddde", "important");
-							tooltipPointer.style.setProperty(`border-top-color`, "#000", "important");
 						}
 					})();
 					
@@ -1632,14 +1603,14 @@ module.exports = (_ => {
 						}
 						if (!elementFound) {
 							if (!InternalBDFDB.patchObserverData.observer) {
-								let appmount = document.querySelector(BDFDB.dotCN.appmount);
-								if (appmount) {
+								let appMount = document.querySelector(BDFDB.dotCN.appmount);
+								if (appMount) {
 									InternalBDFDB.patchObserverData.observer = new MutationObserver(cs => {cs.forEach(c => {c.addedNodes.forEach(n => {
 										if (!n || !n.tagName) return;
 										for (let type in InternalBDFDB.patchObserverData.data) if (!InternalBDFDB.patchObserverData.data[type].found) {
 											let ele = null;
 											if ((ele = BDFDB.DOMUtils.containsClass(n, ...InternalBDFDB.patchObserverData.data[type].classes) ? n : n.querySelector(InternalBDFDB.patchObserverData.data[type].selector)) != null) {
-												InternalBDFDB.patchObserverData.data[type].found = InternalBDFDB.checkEle(InternalBDFDB.patchObserverData.data[type].plugins, ele, type, config);
+												InternalBDFDB.patchObserverData.data[type].found = InternalBDFDB.checkEle(InternalBDFDB.patchObserverData.data[type].plugins, ele, type, InternalBDFDB.patchObserverData.data[type].config);
 												if (InternalBDFDB.patchObserverData.data[type].found) {
 													delete InternalBDFDB.patchObserverData.data[type];
 													if (BDFDB.ObjectUtils.isEmpty(InternalBDFDB.patchObserverData.data)) {
@@ -1650,10 +1621,10 @@ module.exports = (_ => {
 											}
 										}
 									});});});
-									InternalBDFDB.patchObserverData.observer.observe(appmount, {childList:true, subtree:true});
+									InternalBDFDB.patchObserverData.observer.observe(appMount, {childList:true, subtree:true});
 								}
 							}
-							if (!InternalBDFDB.patchObserverData.data[type]) InternalBDFDB.patchObserverData.data[type] = {selector, classes, found:false, plugins:[]};
+							if (!InternalBDFDB.patchObserverData.data[type]) InternalBDFDB.patchObserverData.data[type] = {selector, classes, found:false, config, plugins:[]};
 							InternalBDFDB.patchObserverData.data[type].plugins.push(pluginData);
 						}
 					}
@@ -3999,8 +3970,8 @@ module.exports = (_ => {
 				
 				const DiscordClasses = Object.assign({}, InternalData.DiscordClasses);
 				BDFDB.DiscordClasses = Object.assign({}, DiscordClasses);
-				InternalBDFDB.getDiscordClass = (item, selector) => {
-					let className = DiscordClassModules.BDFDB.BDFDBundefined;
+				InternalBDFDB.getDiscordClass = function (item, selector) {
+					let className = fallbackClassName = DiscordClassModules.BDFDB.BDFDBundefined + "-" + InternalBDFDB.generateClassId();
 					if (DiscordClasses[item] === undefined) {
 						BDFDB.LogUtils.warn(item + " not found in DiscordClasses");
 						return className;
@@ -4021,17 +3992,23 @@ module.exports = (_ => {
 						for (let prop of [DiscordClasses[item][1]].flat()) {
 							className = DiscordClassModules[DiscordClasses[item][0]][prop];
 							if (className) break;
-							else className = DiscordClassModules.BDFDB.BDFDBundefined;
+							else className = fallbackClassName;
 						}
 						if (selector) {
 							className = className.split(" ").filter(n => n.indexOf("da-") != 0).join(selector ? "." : " ");
-							className = className || DiscordClassModules.BDFDB.BDFDBundefined;
+							className = className || fallbackClassName;
 						}
 						else {
 							if (BDFDB.BDUtils.getSettings(BDFDB.BDUtils.settingsIds.normalizedClasses)) className = className.split(" ").filter(n => n.indexOf("da-") != 0).map(n => n.replace(/^([A-z0-9]+?)-([A-z0-9_-]{6})$/g, "$1-$2 da-$1")).join(" ");
 						}
-						return BDFDB.ArrayUtils.removeCopies(className.split(" ")).join(" ");
+						return BDFDB.ArrayUtils.removeCopies(className.split(" ")).join(" ") || fallbackClassName;
 					}
+				};
+				const generationChars = "0123456789ABCDEFGHIJKMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_".split("");
+				InternalBDFDB.generateClassId = function () {
+					let id = "";
+					while (id.length < 6) id += generationChars[Math.floor(Math.random() * generationChars.length)];
+					return id;
 				};
 				BDFDB.disCN = new Proxy(DiscordClasses, {
 					get: function (list, item) {
@@ -6936,6 +6913,38 @@ module.exports = (_ => {
 					else InternalComponents.LibraryComponents[type][key] = InternalComponents.NativeSubComponents[type][key];
 				}
 				BDFDB.LibraryComponents = Object.assign({}, InternalComponents.LibraryComponents);
+				
+				InternalBDFDB.createCustomControl = function (reactChild) {
+					let controlButton = BDFDB.DOMUtils.create(`<div class="${BDFDB.disCN._repocontrolsbutton}"></div>`);
+					BDFDB.ReactUtils.render(reactChild, controlButton);
+					return controlButton;
+				};
+				InternalBDFDB.appendCustomControls = function (card) {
+					let checkbox = card.querySelector(BDFDB.dotCN._reposwitch);
+					if (!checkbox) return;
+					let addon = BDFDB.ObjectUtils.get(BDFDB.ReactUtils.getInstance(card), "return.stateNode.props.addon");
+					if (addon && addon.plugin && (addon.plugin == libraryInstance || addon.plugin.name && addon.plugin.name && PluginStores.started[addon.plugin.name] && PluginStores.started[addon.plugin.name] == addon.plugin)) {
+						let controls = [];
+						if (addon.plugin.changeLog) controls.push(InternalBDFDB.createCustomControl(BDFDB.ReactUtils.createElement(InternalComponents.LibraryComponents.TooltipContainer, {
+							text: BDFDB.LanguageUtils.LanguageStrings.CHANGE_LOG,
+							children: BDFDB.ReactUtils.createElement(InternalComponents.LibraryComponents.SvgIcon, {
+								className: BDFDB.disCN._repoicon,
+								name: InternalComponents.LibraryComponents.SvgIcon.Names.CHANGELOG,
+								onClick: _ => {BDFDB.PluginUtils.openChangeLog(addon.plugin);}
+							})
+						})));
+						for (let control of controls) checkbox.parentElement.insertBefore(control, checkbox.parentElement.firstElementChild);
+					}
+				};
+				const cardObserver = (new MutationObserver(changes => {changes.forEach(change => {if (change.addedNodes) {change.addedNodes.forEach(node => {
+					if (BDFDB.DOMUtils.containsClass(node, BDFDB.disCN._repocard)) InternalBDFDB.appendCustomControls(node);
+					if (node.nodeType != Node.TEXT_NODE) for (let child of node.querySelectorAll(BDFDB.dotCN._repocard)) InternalBDFDB.appendCustomControls(child);
+				});}});}));
+				BDFDB.ObserverUtils.connect(BDFDB, document.querySelector(`${BDFDB.dotCN.layer}[aria-label="${BDFDB.DiscordConstants.Layers.USER_SETTINGS}"]`), {name:"cardObserver", instance:cardObserver}, {childList: true, subtree:true});
+				BDFDB.ObserverUtils.connect(BDFDB, BDFDB.dotCN.applayers, {name:"appLayerObserver", instance:(new MutationObserver(changes => {changes.forEach(change => {if (change.addedNodes) {change.addedNodes.forEach(node => {
+					if (node.nodeType != Node.TEXT_NODE && node.getAttribute("aria-label") == BDFDB.DiscordConstants.Layers.USER_SETTINGS) BDFDB.ObserverUtils.connect(BDFDB, node, {name:"cardObserver", instance:cardObserver}, {childList: true, subtree:true});
+				});}});}))}, {childList: true});
+				for (let child of document.querySelectorAll(BDFDB.dotCN._repocard)) InternalBDFDB.appendCustomControls(child);
 
 				const keyDownTimeouts = {};
 				BDFDB.ListenerUtils.add(BDFDB, document, "keydown.BDFDBPressedKeys", e => {
@@ -7338,11 +7347,7 @@ module.exports = (_ => {
 					for (let component in InternalComponents.LibraryComponents) if (!InternalComponents.LibraryComponents[component]) BDFDB.LogUtils.warn(component + " not initialized in LibraryComponents");
 
 					BDFDB.DevUtils = {};
-					BDFDB.DevUtils.generateClassId = function () {
-						let id = "", chars = "0123456789ABCDEFGHIJKMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_".split("");
-						while (id.length < 6) id += chars[Math.floor(Math.random() * chars.length)];
-						return id;
-					};
+					BDFDB.DevUtils.generateClassId = InternalBDFDB.generateClassId;
 					BDFDB.DevUtils.findByIndex = function (index) {
 						return BDFDB.DevUtils.req.c[index];
 					};
@@ -7490,9 +7495,14 @@ module.exports = (_ => {
 		getVersion () {return config.info.version;}
 		getDescription () {return config.info.description;}
 		
-		load () {if (!BDFDB.BDUtils.isPluginEnabled(config.info.name)) BDFDB.BDUtils.enablePlugin(config.info.name);}
+		load () {
+			libraryInstance = this;
+			if (!BDFDB.BDUtils.isPluginEnabled(config.info.name)) BDFDB.BDUtils.enablePlugin(config.info.name);
+		}
 		start() {}
-		stop() {}
+		stop() {
+			if (!BDFDB.BDUtils.isPluginEnabled(config.info.name)) BDFDB.BDUtils.enablePlugin(config.info.name);
+		}
 		
 		getSettingsPanel (collapseStates = {}) {
 			let settingsPanel, settingsItems = [];
@@ -7505,7 +7515,6 @@ module.exports = (_ => {
 				keys: ["settings", key],
 				label: InternalBDFDB.defaults.settings[key].description,
 				note: key == "showToasts" && bdToastSetting && "Disable BBDs general 'Show Toast' setting before disabling this",
-				dividerbottom: true,
 				value: settings[key] || key == "showToasts" && bdToastSetting
 			}));
 			

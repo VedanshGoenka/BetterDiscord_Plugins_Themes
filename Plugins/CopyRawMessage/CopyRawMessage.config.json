@@ -1,4 +1,7 @@
 {
+	"changeLog": {
+		"version": "1.1.2"
+	},
 	"settings": {
 		"copyOnlySelected": true
 	}
