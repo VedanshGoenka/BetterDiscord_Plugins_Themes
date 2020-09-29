@@ -5,7 +5,7 @@ module.exports = (_ => {
 		"info": {
 			"name": "BDFDB",
 			"author": "DevilBro",
-			"version": "1.0.4",
+			"version": "1.0.7",
 			"description": "Gives other plugins utility functions."
 		},
 		"rawUrl": "https://mwittrien.github.io/BetterDiscordAddons/Library/0BDFDB.plugin.js",
@@ -1074,7 +1074,7 @@ module.exports = (_ => {
 						BDFDB.DOMUtils.removeClass(icon, BDFDB.disCN.noticeicon);
 						notice.insertBefore(icon, noticeMessage);
 					}
-					if (options.btn || options.button) notice.appendChild(BDFDB.DOMUtils.create(`<button class="${BDFDB.disCNS.noticebutton + BDFDB.disCN.titlesize14}">${options.btn || options.button}</button>`));
+					if (options.btn || options.button) notice.appendChild(BDFDB.DOMUtils.create(`<button class="${BDFDB.disCN.noticebutton}">${options.btn || options.button}</button>`));
 					if (options.id) notice.id = options.id.split(" ").join("");
 					if (options.selector) BDFDB.DOMUtils.addClass(notice, options.selector);
 					if (options.css) BDFDB.DOMUtils.appendLocalStyle("BDFDBcustomNotificationBar" + id, options.css);
@@ -1498,7 +1498,7 @@ module.exports = (_ => {
 							nonRender: BDFDB.ObjectUtils.toArray(pluginData.patchTypes).flat(10).filter(n => n && !InternalData.ModuleUtilsConfig.InstanceFunctions.includes(n)).length > 0,
 							mapped: InternalData.ModuleUtilsConfig.PatchMap[type]
 						};
-						config.ignoreCheck = !!(config.codeFind || config.propertyFind || config.specialFilter || config.nonRender);
+						config.ignoreCheck = !!(config.codeFind || config.propertyFind || config.specialFilter || config.nonRender || config.memoComponent);
 						config.nonPrototype = InternalData.ModuleUtilsConfig.NonPrototype.includes(unmappedType) || !!(config.codeFind || config.propertyFind || config.nonRender);
 						
 						let component = InternalData.ModuleUtilsConfig.LoadedInComponents[type] && BDFDB.ObjectUtils.get(InternalComponents, InternalData.ModuleUtilsConfig.LoadedInComponents[type]);
@@ -2346,7 +2346,7 @@ module.exports = (_ => {
 				});
 				BDFDB.UserUtils.getStatus = function (id = BDFDB.UserUtils.me.id) {
 					id = typeof id == "number" ? id.toFixed() : id;
-					let activity = BDFDB.UserUtils.getActivitiy(id);
+					let activity = BDFDB.UserUtils.getActivity(id);
 					return activity && activity.type == BDFDB.DiscordConstants.ActivityTypes.STREAMING ? "streaming" : LibraryModules.StatusMetaUtils.getStatus(id);
 				};
 				BDFDB.UserUtils.getStatusColor = function (status) {
@@ -2362,7 +2362,7 @@ module.exports = (_ => {
 						default: return BDFDB.DiscordConstants.Colors.STATUS_GREY;
 					}
 				};
-				BDFDB.UserUtils.getActivitiy = function (id = BDFDB.UserUtils.me.id) {
+				BDFDB.UserUtils.getActivity = function (id = BDFDB.UserUtils.me.id) {
 					for (let activity of LibraryModules.StatusMetaUtils.getActivities(id)) if (activity.type != BDFDB.DiscordConstants.ActivityTypes.CUSTOM_STATUS) return activity;
 					return null;
 				};
@@ -3597,6 +3597,12 @@ module.exports = (_ => {
 						offset++;
 					});
 					return string || original;
+				};
+				BDFDB.StringUtils.findMatchCaseless = function (match, string, any) {
+					if (typeof match != "string" || typeof string != "string" || !match || !string) return "";
+					match = BDFDB.StringUtils.regEscape(match);
+					let exec = (new RegExp(any ? `([\\n\\r\\s]+${match})|(^${match})` : `([\\n\\r\\s]+${match}[\\n\\r\\s]+)|([\\n\\r\\s]+${match}$)|(^${match}[\\n\\r\\s]+)|(^${match}$)`, "i")).exec(string);
+					return exec && typeof exec[0] == "string" && exec[0].replace(/[\n\r\s]/g, "") || "";
 				};
 				BDFDB.StringUtils.extractSelection = function (original, selection) {
 					if (typeof original != "string") return "";

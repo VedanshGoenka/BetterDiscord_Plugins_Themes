@@ -32,7 +32,7 @@
 		"useChromium": false
 	},
 	"zoomSettings": {
-		"lensesize": 200,
-		"zoomlevel": 2
+		"lensesize": 50,
+		"zoomlevel": 3
 	}
 }
